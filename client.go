@@ -3,18 +3,22 @@ package main
 import (
 	"net"
 	"bufio"
-	"fmt"
 	"os"
+	"fmt"
 )
 var conn net.Conn
 
 func main () {
 
-
+	connect()
+	go func() {
+		for {
+			response, _ := bufio.NewReader(conn).ReadString('\n')
+			fmt.Println(response)
+		}
+	}()
 	for {
-		connect()
 		tcpClient()
-		conn.Close()
 	}
 	//defer conn.Close()
 }
@@ -24,13 +28,9 @@ func connect() {
 	conn = con
 }
 func tcpClient() {
-
 	messageToServer := getUserInput()
 	messageToServer = append(messageToServer, '\n')
 	conn.Write([]byte(messageToServer))
-
-	response, _ := bufio.NewReader(conn).ReadString('\n')
-	fmt.Println(response)
 }
 
 func getUserInput()[]byte {
@@ -38,3 +38,4 @@ func getUserInput()[]byte {
 	m, _, _ := r.ReadLine()
 	return m
 }
+

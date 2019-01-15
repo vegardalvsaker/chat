@@ -6,7 +6,13 @@ import (
 	"fmt"
 )
 
+type Client struct {
+	connection	net.Conn
+	nick	string
+}
+
 var listen net.Listener
+var clients []Client
 
 func main() {
 	listenplz()
@@ -29,15 +35,24 @@ func listenplz() {
 func tcpServer() {
 
 	conn, _ := listen.Accept()
-
-	defer conn.Close()
-
-
-	mes, _ := bufio.NewReader(conn).ReadString('\n')
+	fmt.Println("Client", conn.RemoteAddr().String(), "has connected")
+	nick, _ := bufio.NewReader(conn).ReadString('\n')
 	address := conn.LocalAddr().String()
-	response := address + mes
-
+	response := address
+	cl := Client{connection: conn, nick: nick}
+	clients = append(clients, cl)
 	conn.Write([]byte(response))
+	go cl.HoldTheLine()
+}
 
+func (c *Client) HoldTheLine() {
+	for {
+		message, _ := bufio.NewReader(c.connection).ReadString('\n')
+
+		for _, c := range clients {
+			c.connection.Write([]byte(c.nick))
+			c.connection.Write([]byte(message))
+		}
+	}
 }
 
