@@ -18,8 +18,9 @@ func main() {
 	listenplz()
 
 	for {
-		tcpServer()
-		fmt.Println("Starting over")
+		cl := tcpServer()
+		go cl.HoldTheLine()
+
 	}
 	defer listen.Close()
 }
@@ -32,7 +33,7 @@ func listenplz() {
 	}
 }
 
-func tcpServer() {
+func tcpServer()Client {
 
 	conn, _ := listen.Accept()
 	fmt.Println("Client", conn.RemoteAddr().String(), "has connected")
@@ -42,7 +43,7 @@ func tcpServer() {
 	cl := Client{connection: conn, nick: nick}
 	clients = append(clients, cl)
 	conn.Write([]byte(response))
-	go cl.HoldTheLine()
+	return cl
 }
 
 func (c *Client) HoldTheLine() {
