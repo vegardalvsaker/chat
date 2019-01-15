@@ -4,6 +4,7 @@ import (
 	"net"
 	"bufio"
 	"fmt"
+	"time"
 )
 
 type Client struct {
@@ -16,7 +17,7 @@ var clients []Client
 
 func main() {
 	listenplz()
-
+	go PrintCurrentClients()
 	for {
 		cl := tcpServer()
 		go cl.HoldTheLine()
@@ -57,3 +58,12 @@ func (c *Client) HoldTheLine() {
 	}
 }
 
+func PrintCurrentClients() {
+	for {
+		time.Sleep(5000000000)
+		for _, c := range clients {
+			fmt.Println(c.nick, "is logged in")
+		}
+		fmt.Println("--------------------------------------------")
+	}
+}
