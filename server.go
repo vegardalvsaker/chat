@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"time"
+	"strings"
 )
 
 type Client struct {
@@ -20,7 +21,7 @@ func main() {
 	go PrintCurrentClients()
 	for {
 		cl := tcpServer()
-		go cl.HoldTheLine()
+		go HoldTheLine(cl)
 
 	}
 	defer listen.Close()
@@ -47,13 +48,24 @@ func tcpServer()Client {
 	return cl
 }
 
-func (c *Client) HoldTheLine() {
+func HoldTheLine(cl Client) {
 	for {
-		message, _ := bufio.NewReader(c.connection).ReadString('\n')
-
+		message, _ := bufio.NewReader(cl.connection).ReadString('\n')
+	if strings.ToLower(message) == "quit\n" {
+		cl.connection.Write([]byte("Goodbye" + cl.nick))
+		cl.connection.Close()
+		for i, c := range clients {
+			if c == cl {
+				clients = append(clients[:i], clients[i+1:]...)
+			} else {
+				c.connection.Write([]byte(cl.nick + "has disconnected"))
+			}
+		}
+	} else {
 		for _, c := range clients {
-			c.connection.Write([]byte(c.nick))
+			c.connection.Write([]byte(cl.nick))
 			c.connection.Write([]byte(message))
+			}
 		}
 	}
 }
@@ -67,3 +79,4 @@ func PrintCurrentClients() {
 		fmt.Println("--------------------------------------------")
 	}
 }
+
