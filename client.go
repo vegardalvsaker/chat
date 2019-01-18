@@ -6,10 +6,15 @@ import (
 	"os"
 	"fmt"
 	"strings"
+	"os/signal"
+	"syscall"
 )
+
 var conn net.Conn
-var closed bool = false
+var closed = false
+
 func main () {
+	quitProperly()
 	fmt.Println("Which IP will you be connecting to today?")
 	connect(string(getUserInput()[:]))
 	go func() {
@@ -23,7 +28,6 @@ func main () {
 				break Loop1
 			} else {
 				fmt.Println(response)
-
 			}
 		}
 	}()
@@ -63,5 +67,25 @@ func getUserInput()[]byte {
 	r := bufio.NewReader(os.Stdin)
 	m, _, _ := r.ReadLine()
 	return m
+}
+//Handles proper closing if a user quits with Ctrl-C
+func quitProperly() {
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, syscall.SIGINT)
+	go func () {
+		for sig := range ch {
+			switch sig {
+			case syscall.SIGINT:
+				fmt.Println("SIGINT recieved.")
+				if conn != nil {
+					conn.Write([]byte("quit\n"))
+					conn.Close()
+				}
+
+				fmt.Println("Thank you and goodbye")
+				os.Exit(0)
+			}
+		}
+	} ()
 }
 

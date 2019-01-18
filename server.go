@@ -4,8 +4,8 @@ import (
 	"net"
 	"bufio"
 	"fmt"
-	"time"
 	"strings"
+	"time"
 )
 
 type Client struct {
@@ -17,40 +17,68 @@ var listen net.Listener
 var clients []Client
 
 func main() {
-	listenplz()
+	Listen()
 	go PrintCurrentClients()
 	for {
-		cl := tcpServer()
-		go HoldTheLine(cl)
-
+		conn, err := listen.Accept()
+		if err != nil {
+			fmt.Printf("error occured when trying to make a connection with a client: %s", err)
+		}
+		go tcpServer(conn)
 	}
 	defer listen.Close()
 }
 
-func listenplz() {
+func Listen() {
 	ln, err := net.Listen("tcp", ":17")
 	listen = ln
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Listening on port 17")
 }
 
-func tcpServer()Client {
+func tcpServer(conn net.Conn) {
 
-	conn, _ := listen.Accept()
 	fmt.Println("Client", conn.RemoteAddr().String(), "has connected")
 	nick, _ := bufio.NewReader(conn).ReadString('\n')
-	address := conn.LocalAddr().String()
-	response := address
 	cl := Client{connection: conn, nick: nick}
 	clients = append(clients, cl)
-	conn.Write([]byte(response))
-	return cl
+	go HoldTheLine(cl)
 }
-
+//Function for keeping the client connected and able to chat
 func HoldTheLine(cl Client) {
 	for {
 		message, _ := bufio.NewReader(cl.connection).ReadString('\n')
+	if quit(message, cl) { return
+	} else {
+		for _, c := range clients {
+			//Avoid sending a message the client wrote themselves
+			if c != cl {
+				fmt.Println("Writing to client:", cl.nick)
+				c.connection.Write([]byte(cl.nick))
+				c.connection.Write([]byte(message))
+				}
+			}
+		}
+	}
+}
+
+func PrintCurrentClients() {
+	for {
+		if len(clients) == 0 {
+			fmt.Println("No clients connected.")
+		} else {
+			for _, c := range clients {
+				fmt.Println(c.nick, "is logged in")
+			}
+		}
+		fmt.Println("--------------------------------------------")
+		time.Sleep(5000000000)
+	}
+}
+
+func quit(message string, cl Client)bool {
 	if strings.ToLower(message) == "quit\n" {
 		cl.connection.Write([]byte("Goodbye" + cl.nick))
 		cl.connection.Close()
@@ -61,22 +89,8 @@ func HoldTheLine(cl Client) {
 				c.connection.Write([]byte(cl.nick + "has disconnected"))
 			}
 		}
-	} else {
-		for _, c := range clients {
-			c.connection.Write([]byte(cl.nick))
-			c.connection.Write([]byte(message))
-			}
-		}
+		return true
 	}
-}
-
-func PrintCurrentClients() {
-	for {
-		time.Sleep(5000000000)
-		for _, c := range clients {
-			fmt.Println(c.nick, "is logged in")
-		}
-		fmt.Println("--------------------------------------------")
-	}
+	return false
 }
 
